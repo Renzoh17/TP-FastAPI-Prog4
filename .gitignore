@@ -1,0 +1,60 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+.env
+
+# Archivos de variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de distribución / empaquetado
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Logs y bases de datos locales (si usas SQLite en desarrollo)
+*.log
+*.sqlite3
+instance/
+
+# Entornos de desarrollo local
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.pyre/
+
+# Archivos temporales
+*.tmp
+*.bak
+*.orig
