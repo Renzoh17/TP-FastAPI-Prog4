@@ -23,7 +23,7 @@ def get_auto_repository(session: Session = Depends(get_session)) -> AutoReposito
     return AutoRepository(session)
 
 # -------------------------------------------------------------------
-# 1. POST /autos - Crear nuevo auto
+# POST /autos - Crear nuevo auto
 # -------------------------------------------------------------------
 
 @router.post("/", response_model=AutoResponse, status_code=status.HTTP_201_CREATED)
@@ -46,7 +46,7 @@ def create_auto(
         )
 
 # -------------------------------------------------------------------
-# 2. GET /autos - Listar autos con paginación
+# GET /autos - Listar autos con paginación
 # -------------------------------------------------------------------
 
 @router.get("/", response_model=List[AutoResponse])
@@ -61,7 +61,7 @@ def read_all_autos(
     return repository.get_all(skip=skip, limit=limit)
 
 # -------------------------------------------------------------------
-# 3. GET /autos/{auto_id} - Obtener auto por ID (Respuesta simple)
+# GET /autos/{auto_id} - Obtener auto por ID (Respuesta simple)
 # -------------------------------------------------------------------
 
 @router.get("/{auto_id}", response_model=AutoResponse)
@@ -81,12 +81,8 @@ def read_auto_by_id_simple(
     return auto
 
 # -------------------------------------------------------------------
-# 4. PUT /autos/{auto_id} - Actualizar auto (Reemplazo total)
+# PUT /autos/{auto_id} - Actualizar auto (Reemplazo total)
 # -------------------------------------------------------------------
-# Nota: La funcionalidad PATCH que habíamos hecho es más común para updates parciales.
-# Para un PUT estricto (reemplazo total), se usaría AutoCreate en la entrada
-# y se requeriría que todos los campos sean enviados. Usaremos el método update
-# del repositorio para manejarlo, asumiendo que el cliente enviará todos los datos.
 
 @router.put("/{auto_id}", response_model=AutoResponse)
 def replace_auto(
@@ -110,7 +106,7 @@ def replace_auto(
     return updated_auto
 
 # -------------------------------------------------------------------
-# 5. DELETE /autos/{auto_id} - Eliminar auto
+# DELETE /autos/{auto_id} - Eliminar auto
 # -------------------------------------------------------------------
 
 @router.delete("/{auto_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -130,7 +126,7 @@ def delete_auto(
     return 
 
 # -------------------------------------------------------------------
-# 6. GET /autos/chasis/{numero_chasis} - Buscar por número de chasis
+# GET /autos/chasis/{numero_chasis} - Buscar por número de chasis
 # -------------------------------------------------------------------
 # Nota: La ruta debe ser específica para evitar conflictos con /{auto_id}
 @router.get("/chasis/{numero_chasis}", response_model=AutoResponse)
@@ -150,7 +146,7 @@ def read_auto_by_chasis(
     return auto
 
 # -------------------------------------------------------------------
-# 7. GET /autos/{auto_id}/with-ventas - Auto con sus ventas
+# GET /autos/{auto_id}/with-ventas - Auto con sus ventas
 # -------------------------------------------------------------------
 # Esta ruta utiliza una ruta anidada para ser más clara y evitar la colisión
 # con la ruta simple GET /{auto_id}.
@@ -171,3 +167,22 @@ def read_auto_with_ventas(
         )
     # Gracias a la relación definida en models.py, 'auto' ya incluye la lista de 'ventas'.
     return auto
+
+# -------------------------------------------------------------------
+# GET /search - Autos por Marca o Modelo
+# -------------------------------------------------------------------
+
+@router.get("marcaomodelo/search", response_model=List[AutoResponse])
+def search_autos(
+    query: str = Query(..., description="Cadena de búsqueda para Marca o Modelo."),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, gt=0, le=100),
+    repository: AutoRepository = Depends(get_auto_repository)
+):
+    """
+    Busca Autos por coincidencia parcial en Marca o Modelo (case-insensitive).
+    """
+    if not query.strip():
+        raise HTTPException(status_code=400, detail="La consulta no puede estar vacía.")
+        
+    return repository.search_by_brand_or_model(query, skip=skip, limit=limit)

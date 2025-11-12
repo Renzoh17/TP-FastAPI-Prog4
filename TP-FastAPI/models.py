@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 import re
 
@@ -9,11 +9,11 @@ from pydantic import field_validator
 
 
 # Obtener el año actual una sola vez para la validación de 'Auto'
-CURRENT_YEAR = datetime.now().year
+CURRENT_YEAR = datetime.now(timezone.utc).year
 
 
 # ====================================================================
-# --- 1. Modelos de Venta (Many side) ---
+# --- Modelos de Venta (Many side) ---
 # ====================================================================
 
 # VentaBase: Campos comunes con validaciones Pydantic
@@ -23,14 +23,21 @@ class VentaBase(SQLModel):
     # Clave foránea que enlaza esta Venta con el Auto
     auto_id: Optional[int] = Field(default=None, foreign_key="auto.id")
     # Usamos UTC por defecto para la consistencia
-    fecha_venta: datetime = Field(default_factory=datetime.now())
+    fecha_venta: datetime = Field(default_factory=datetime.now(timezone.utc))
 
     # Validador para asegurar que la fecha no sea futura
-    @field_validator("fecha_venta", mode='before')
+    @field_validator("fecha_venta", mode='after')
     @classmethod
     def validate_fecha_venta_not_future(cls, v):
         """Asegura que la fecha de venta no sea en el futuro."""
-        if v and v > datetime.now():
+        
+        # Si la fecha que Pydantic devuelve de la deserialización es naive,
+        # la forzamos a ser UTC-aware para la comparación.
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        
+        # Validamos que no sea futura
+        if v and v > datetime.now(timezone.utc):
             raise ValueError("La fecha de venta no puede ser en el futuro.")
         return v
 
@@ -56,16 +63,19 @@ class VentaUpdate(SQLModel):
     auto_id: Optional[int] = Field(default=None, foreign_key="auto.id")
 
     # Reutilizamos la lógica del validador para la actualización
-    @field_validator("fecha_venta", mode='before')
+    @field_validator("fecha_venta", mode='after')
     @classmethod
     def validate_fecha_venta_not_future_update(cls, v):
-        if v and v > datetime.now():
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        
+        if v and v > datetime.now(timezone.utc):
             raise ValueError("La fecha de venta no puede ser en el futuro.")
         return v
 
 
 # ====================================================================
-# --- 2. Modelos de Auto (One side) ---
+# --- Modelos de Auto (One side) ---
 # ====================================================================
 
 # AutoBase: Campos comunes con validaciones Pydantic
@@ -117,7 +127,7 @@ class AutoUpdate(SQLModel):
 
 
 # ====================================================================
-# --- 3. Modelos de Respuesta con Relaciones Anidadas ---
+# --- Modelos de Respuesta con Relaciones Anidadas ---
 # ====================================================================
 
 # AutoResponseWithVentas: Incluye la lista de ventas asociadas

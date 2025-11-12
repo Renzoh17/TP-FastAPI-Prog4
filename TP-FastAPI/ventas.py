@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -28,7 +29,7 @@ def get_venta_repository(session: Session = Depends(get_session)) -> VentaReposi
     return VentaRepository(session)
 
 # -------------------------------------------------------------------
-# 1. POST /ventas - Crear nueva venta
+# POST /ventas - Crear nueva venta
 # -------------------------------------------------------------------
 
 @router.post("/", response_model=VentaResponse, status_code=status.HTTP_201_CREATED)
@@ -46,7 +47,6 @@ def create_venta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Auto con ID {venta_data.auto_id} no encontrado. No se puede crear la venta."
         )
-    
     try:
         new_venta = venta_repo.create(venta_data)
         return new_venta
@@ -57,7 +57,7 @@ def create_venta(
         )
 
 # -------------------------------------------------------------------
-# 2. GET /ventas - Listar ventas con paginación
+# GET /ventas - Listar ventas con paginación
 # -------------------------------------------------------------------
 
 @router.get("/", response_model=List[VentaResponse])
@@ -72,7 +72,7 @@ def read_all_ventas(
     return repository.get_all(skip=skip, limit=limit)
 
 # -------------------------------------------------------------------
-# 3. GET /ventas/{venta_id} - Obtener venta por ID (Respuesta simple)
+# GET /ventas/{venta_id} - Obtener venta por ID (Respuesta simple)
 # -------------------------------------------------------------------
 
 @router.get("/{venta_id}", response_model=VentaResponse)
@@ -92,7 +92,7 @@ def read_venta_by_id_simple(
     return venta
 
 # -------------------------------------------------------------------
-# 4. PUT /ventas/{venta_id} - Actualizar venta (Reemplazo total)
+# PUT /ventas/{venta_id} - Actualizar venta (Reemplazo total)
 # -------------------------------------------------------------------
 # Nota: Usamos VentaCreate para el PUT para asegurar que se envíen todos los campos
 @router.put("/{venta_id}", response_model=VentaResponse)
@@ -112,7 +112,7 @@ def replace_venta(
             detail=f"Auto con ID {venta_data.auto_id} no encontrado. No se puede actualizar la venta."
         )
 
-    # 2. Convertir a VentaUpdate y realizar la actualización
+    # Convertir a VentaUpdate y realizar la actualización
     venta_update_data = VentaUpdate.model_validate(venta_data.model_dump())
     updated_venta = venta_repo.update(venta_id, venta_update_data)
     
@@ -124,7 +124,7 @@ def replace_venta(
     return updated_venta
 
 # -------------------------------------------------------------------
-# 5. DELETE /ventas/{venta_id} - Eliminar venta
+# DELETE /ventas/{venta_id} - Eliminar venta
 # -------------------------------------------------------------------
 
 @router.delete("/{venta_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -144,7 +144,7 @@ def delete_venta(
     return 
 
 # -------------------------------------------------------------------
-# 6. GET /ventas/auto/{auto_id} - Ventas de un auto específico
+# GET /ventas/auto/{auto_id} - Ventas de un auto específico
 # -------------------------------------------------------------------
 
 @router.get("/auto/{auto_id}", response_model=List[VentaResponse])
@@ -156,7 +156,7 @@ def read_ventas_by_auto_id(
     """
     Obtiene todas las Ventas asociadas a un Auto específico.
     """
-    # 1. Verificar si el Auto existe antes de buscar sus ventas
+    # Verificar si el Auto existe antes de buscar sus ventas
     if not auto_repo.get_by_id(auto_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -167,7 +167,7 @@ def read_ventas_by_auto_id(
     return ventas
 
 # -------------------------------------------------------------------
-# 7. GET /ventas/comprador/{nombre} - Ventas por nombre de comprador
+# GET /ventas/comprador/{nombre} - Ventas por nombre de comprador
 # -------------------------------------------------------------------
 # Nota: La ruta debe ser específica para evitar conflictos con /{venta_id}
 @router.get("/comprador/{nombre}", response_model=List[VentaResponse])
@@ -182,7 +182,7 @@ def read_ventas_by_comprador(
     return ventas
 
 # -------------------------------------------------------------------
-# 8. GET /ventas/{venta_id}/with-auto - Venta con información del auto
+# GET /ventas/{venta_id}/with-auto - Venta con información del auto
 # -------------------------------------------------------------------
 
 @router.get("/{venta_id}/with-auto", response_model=VentaResponseWithAuto)
@@ -201,3 +201,45 @@ def read_venta_with_auto(
         )
     # Gracias a la relación definida en models.py, 'venta' ya incluye el objeto 'auto'.
     return venta
+
+# -------------------------------------------------------------------
+# GET /filter/price - Filtrado por Rango de Precios
+# -------------------------------------------------------------------
+
+@router.get("/filter/price", response_model=List[VentaResponse])
+def filter_ventas_by_price(
+    min_price: float = Query(0.0, ge=0, description="Precio mínimo de venta."),
+    max_price: float = Query(float('inf'), ge=0, description="Precio máximo de venta."),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, gt=0, le=100),
+    repository: VentaRepository = Depends(get_venta_repository)
+):
+    """
+    Filtra ventas por un rango de precio.
+    """
+    if min_price > max_price:
+         raise HTTPException(status_code=400, detail="El precio mínimo no puede ser mayor que el precio máximo.")
+         
+    return repository.filter_by_price_range(min_price, max_price, skip=skip, limit=limit)
+
+
+# -------------------------------------------------------------------
+# GET /filter/date - Filtrado por Rango de Fechas
+# -------------------------------------------------------------------
+
+@router.get("/filter/date", response_model=List[VentaResponse])
+def filter_ventas_by_date(
+    # FastAPI/Pydantic intentará parsear estas cadenas a objetos datetime
+    start_date: datetime = Query(..., description="Fecha de inicio (ej: 2024-01-01T00:00:00)."),
+    end_date: datetime = Query(..., description="Fecha de fin (ej: 2024-12-31T23:59:59)."),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, gt=0, le=100),
+    repository: VentaRepository = Depends(get_venta_repository)
+):
+    """
+    Filtra ventas por un rango de fecha.
+    """
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="La fecha de inicio no puede ser posterior a la fecha de fin.")
+        
+    return repository.filter_by_date_range(start_date, end_date, skip=skip, limit=limit)
