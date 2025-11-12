@@ -1,4 +1,3 @@
-```markdown
 # 🚗 Gestión de Inventario de Autos y Ventas API
 
 API RESTful construida con **FastAPI** y **SQLModel** para la gestión de un inventario de vehículos y el seguimiento de sus ventas. Utiliza **PostgreSQL** como base de datos relacional.
@@ -32,7 +31,7 @@ proyecto/
 ├── requirements.txt    \# Lista de dependencias Python.
 └── .env                \# Variables de entorno para la DB.
 
-````
+```
 
 ---
 
