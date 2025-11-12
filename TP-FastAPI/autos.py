@@ -169,7 +169,7 @@ def read_auto_with_ventas(
     return auto
 
 # -------------------------------------------------------------------
-# GET /search - Autos por Marca o Modelo
+# GET /marcaomodelo/search - Autos por Marca o Modelo
 # -------------------------------------------------------------------
 
 @router.get("marcaomodelo/search", response_model=List[AutoResponse])
