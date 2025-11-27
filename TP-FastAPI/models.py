@@ -23,7 +23,7 @@ class VentaBase(SQLModel):
     # Clave foránea que enlaza esta Venta con el Auto
     auto_id: Optional[int] = Field(default=None, foreign_key="auto.id")
     # Usamos UTC por defecto para la consistencia
-    fecha_venta: datetime = Field(default_factory=datetime.now(timezone.utc))
+    fecha_venta: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Validador para asegurar que la fecha no sea futura
     @field_validator("fecha_venta", mode='after')
