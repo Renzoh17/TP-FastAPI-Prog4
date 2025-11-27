@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # 1. SERVICIO DE BASE DE DATOS (POSTGRESQL)
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: autos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    
+    # NUEVO: Agregamos el chequeo de salud para saber cuándo está realmente listo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # Le da tiempo inicial para arrancar
+
+  # 2. SERVICIO DE APLICACIÓN (FASTAPI)
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:admin@db:5432/autos_db
+    
+    # CAMBIO: Usamos condition: service_healthy en lugar de depends_on
+    depends_on:
+      db:
+        condition: service_healthy # Espera hasta que el healthcheck de 'db' sea exitoso
+
+volumes:
+  postgres_data:
